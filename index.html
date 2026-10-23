@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;500;700&display=swap">
+<style>
+/* Written for VIDAA's old Chrome engine: no flex `gap`, no `inset`,
+   no full-screen image animation. Margins + opacity fades only. */
+html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0b0d12; }
+body { font-family: 'Noto Kufi Arabic', 'Segoe UI', Arial, sans-serif; color: #f4efe6; }
+.bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 3s linear; }
+.bg.on { opacity: 1; }
+.dawn   { background: linear-gradient(180deg, #2b3a67 0%, #b56576 55%, #f1a66a 100%); }
+.day    { background: linear-gradient(180deg, #3a7bd5 0%, #7fb3d5 60%, #d9e7f2 100%); }
+.sunset { background: linear-gradient(180deg, #2d1b3d 0%, #a4508b 45%, #f6a35c 100%); }
+.night  { background: linear-gradient(180deg, #05070d 0%, #111a2e 60%, #1c2742 100%); }
+.shade  { position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+          background: linear-gradient(180deg, rgba(0,0,0,.15) 0%, rgba(0,0,0,.05) 40%, rgba(0,0,0,.6) 100%); }
+
+#app { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+.top { position: absolute; top: 4vh; right: 4vw; left: 4vw; }
+.clock { font-size: 7vw; font-weight: 300; line-height: 1; }
+.clock small { font-size: 1.6vw; margin-right: .6vw; opacity: .8; }
+.date { font-size: 1.3vw; opacity: .85; margin-top: 1vh; }
+.weather { position: absolute; top: 0; left: 0; text-align: left; }
+.weather .t { font-size: 3vw; font-weight: 500; }
+.weather .s { font-size: 1.1vw; opacity: .8; }
+
+.cards { position: absolute; top: 30vh; right: 4vw; left: 4vw; white-space: nowrap; }
+.card { display: inline-block; vertical-align: top; margin-left: 1.5vw; padding: 1.4vh 1.6vw;
+        background: rgba(10,12,18,.45); border-radius: .8vw; min-width: 14vw; }
+.card .k { font-size: 1vw; opacity: .7; }
+.card .v { font-size: 2vw; font-weight: 700; margin-top: .4vh; }
+.card .n { font-size: 1vw; opacity: .8; margin-top: .3vh; }
+
+.shelf-title { position: absolute; bottom: 31vh; right: 4vw; font-size: 1.3vw; opacity: .85; }
+.shelf { position: absolute; bottom: 9vh; right: 4vw; left: 4vw; height: 20vh; white-space: nowrap; overflow: hidden; }
+.tile { display: inline-block; vertical-align: top; width: 14vw; height: 16vh; margin-left: 1.2vw; margin-top: 2vh;
+        border-radius: 1vw; position: relative; transition: transform .15s ease-out; }
+.tile .name { position: absolute; bottom: 1.4vh; right: 1.2vw; left: 1.2vw; font-size: 1.5vw; font-weight: 700;
+              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile.focus { transform: scale(1.1); box-shadow: 0 0 0 .3vw #fff; }
+.hint { position: absolute; bottom: 3vh; right: 4vw; font-size: 1vw; opacity: .6; }
+.toast { position: absolute; bottom: 32vh; left: 50%; width: 40vw; margin-left: -20vw; text-align: center;
+         padding: 1.5vh 1vw; background: rgba(0,0,0,.75); border-radius: .8vw; font-size: 1.3vw;
+         opacity: 0; transition: opacity .3s; }
+.toast.on { opacity: 1; }
+
+/* Screensaver */
+#saver { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 1.5s;
+         background: rgba(0,0,0,.35); pointer-events: none; }
+#saver.on { opacity: 1; }
+#saver .big { position: absolute; top: 18vh; left: 6vw; font-size: 14vw; font-weight: 300; line-height: 1; direction: ltr; }
+#saver .row { position: absolute; bottom: 10vh; right: 6vw; left: 6vw; white-space: nowrap; }
+#saver.on ~ #app { opacity: 0; }
+#app { transition: opacity 1.5s; }
+
+html[dir=ltr] .top .weather { left: auto; right: 0; text-align: right; }
+html[dir=ltr] .card, html[dir=ltr] .tile { margin-left: 0; margin-right: 1.5vw; }
+html[dir=ltr] .shelf-title, html[dir=ltr] .hint { right: auto; left: 4vw; }
+html[dir=ltr] .clock small { margin-right: 0; margin-left: .6vw; }
+</style>
+</head>
+<body>
+<div id="bgA" class="bg"></div>
+<div id="bgB" class="bg"></div>
+<div class="shade"></div>
+
+<div id="saver">
+  <div class="big" id="sClock">--:--</div>
+  <div class="row" id="sRow"></div>
+</div>
+
+<div id="app">
+  <div class="top">
+    <div class="clock"><span id="clock">--:--</span><small id="ampm"></small></div>
+    <div class="date" id="date"></div>
+    <div class="weather"><div class="t" id="wT">--°</div><div class="s" id="wS"></div></div>
+  </div>
+  <div class="cards" id="cards"></div>
+  <div class="shelf-title" id="shelfTitle"></div>
+  <div class="shelf" id="shelf"></div>
+  <div class="hint" id="hint"></div>
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ===================== EDIT THIS PART ===================== */
+var CONFIG = {
+  lang: 'ar',                 // 'ar' or 'en'
+  digits: 'latn',             // 'latn' = 123, 'arab' = ١٢٣
+  clock24: false,
+  city: { ar: 'دبي', en: 'Dubai', lat: 25.2048, lon: 55.2708 },
+  // Aladhan methods: 4 = Umm al-Qura, 16 = Dubai, 8 = Gulf, 3 = MWL
+  prayerMethod: 16,
+  screensaverMinutes: 10,
+  // url: tiles with a URL open it (VIDAA web apps work this way).
+  // No url: the tile shows a hint to use the remote's app button.
+  apps: [
+    { name: 'YouTube',   color: '#e62117', url: 'https://www.youtube.com/tv' },
+    { name: 'Netflix',   color: '#b20710' },
+    { name: 'Prime Video', color: '#1a98ff' },
+    { name: 'Shahid',    color: '#20b26b' },
+    { name: 'Twitch',    color: '#9146ff', url: 'https://hisense.tv.twitch.tv/' },
+    { name: 'Browser',   color: '#3c4454', url: 'https://www.google.com' }
+  ]
+};
+/* ========================================================== */
+
+var T = {
+  ar: { apps: 'المفضلة', next: 'الصلاة القادمة', ram: 'رمضان', days: 'يوماً', starts: 'يبدأ',
+        inT: 'بعد', h: 'س', m: 'د', hint: 'الأسهم للتنقل • OK للفتح • زر الرجوع للخروج',
+        noUrl: 'افتح هذا التطبيق من زر الريموت أو قائمة التطبيقات', am: 'ص', pm: 'م',
+        P: { Fajr: 'الفجر', Dhuhr: 'الظهر', Asr: 'العصر', Maghrib: 'المغرب', Isha: 'العشاء' },
+        now: 'رمضان مبارك' },
+  en: { apps: 'Favorites', next: 'Next prayer', ram: 'Ramadan', days: 'days', starts: 'Starts',
+        inT: 'in', h: 'h', m: 'm', hint: 'Arrows to move • OK to open • Back to exit',
+        noUrl: 'Open this app from your remote button or the app list', am: 'AM', pm: 'PM',
+        P: { Fajr: 'Fajr', Dhuhr: 'Dhuhr', Asr: 'Asr', Maghrib: 'Maghrib', Isha: 'Isha' },
+        now: 'Ramadan Mubarak' }
+};
+var L = T[CONFIG.lang] || T.en;
+document.documentElement.lang = CONFIG.lang;
+document.documentElement.dir = CONFIG.lang === 'ar' ? 'rtl' : 'ltr';
+var RTL = CONFIG.lang === 'ar';
+var LOCALE = (CONFIG.lang === 'ar' ? 'ar' : 'en') + '-u-nu-' + CONFIG.digits;
+
+function $(id) { return document.getElementById(id); }
+function num(n) { try { return Number(n).toLocaleString(LOCALE, { useGrouping: false }); } catch (e) { return String(n); } }
+function pad(n) { return (n < 10 ? '0' : '') + n; }
+function fmtTime(d) {
+  var h = d.getHours(), m = d.getMinutes(), suf = '';
+  if (!CONFIG.clock24) { suf = h < 12 ? L.am : L.pm; h = h % 12 || 12; }
+  return { t: num(h) + ':' + pad(m).split('').map(num).join(''), s: suf };
+}
+function getJSON(url, cb) {
+  var x = new XMLHttpRequest();
+  x.open('GET', url, true);
+  x.timeout = 15000;
+  x.onload = function () { try { cb(JSON.parse(x.responseText)); } catch (e) {} };
+  x.send();
+}
+
+/* ---------- background by time of day ---------- */
+var bgFront = $('bgA'), bgBack = $('bgB'), bgCur = '';
+function phase(h) { return h >= 4 && h < 7 ? 'dawn' : h < 16 && h >= 7 ? 'day' : h >= 16 && h < 19 ? 'sunset' : 'night'; }
+function updateBg() {
+  var p = phase(new Date().getHours());
+  if (p === bgCur) return;
+  bgCur = p;
+  bgBack.className = 'bg ' + p;
+  setTimeout(function () { bgBack.className += ' on'; bgFront.className = bgFront.className.replace(' on', ''); var t = bgFront; bgFront = bgBack; bgBack = t; }, 50);
+}
+
+/* ---------- prayer, hijri, ramadan ---------- */
+var prayers = null, ramadanStart = null, hijriText = '';
+function loadPrayers() {
+  var d = new Date();
+  var ds = pad(d.getDate()) + '-' + pad(d.getMonth() + 1) + '-' + d.getFullYear();
+  getJSON('https://api.aladhan.com/v1/timings/' + ds + '?latitude=' + CONFIG.city.lat + '&longitude=' +
+          CONFIG.city.lon + '&method=' + CONFIG.prayerMethod, function (r) {
+    if (!r || !r.data) return;
+    prayers = r.data.timings;
+    var hj = r.data.date.hijri;
+    hijriText = num(hj.day) + ' ' + (CONFIG.lang === 'ar' ? hj.month.ar : hj.month.en) + ' ' + num(hj.year);
+    var hm = Number(hj.month.number), hy = Number(hj.year);
+    if (hm === 9) { ramadanStart = 'now'; render(); return; }
+    var y = hm < 9 ? hy : hy + 1;
+    getJSON('https://api.aladhan.com/v1/hToG/01-09-' + y, function (g) {
+      if (g && g.data) { var p = g.data.gregorian.date.split('-'); ramadanStart = new Date(+p[2], +p[1] - 1, +p[0]); }
+      render();
+    });
+    render();
+  });
+}
+function nextPrayer() {
+  if (!prayers) return null;
+  var now = new Date(), names = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+  for (var i = 0; i < names.length; i++) {
+    var hm = prayers[names[i]].split(':');
+    var t = new Date(now.getFullYear(), now.getMonth(), now.getDate(), +hm[0], +hm[1]);
+    if (t > now) return { name: names[i], at: t };
+  }
+  var f = prayers.Fajr.split(':');
+  return { name: 'Fajr', at: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, +f[0], +f[1]) };
+}
+
+/* ---------- weather ---------- */
+var weather = null;
+var WMO = { ar: ['صافي','غائم جزئياً','غائم','ضباب','رذاذ','مطر','ثلج','زخات','عاصفة'],
+            en: ['Clear','Partly cloudy','Cloudy','Fog','Drizzle','Rain','Snow','Showers','Storm'] };
+function wmoText(c) {
+  var i = c === 0 ? 0 : c <= 2 ? 1 : c === 3 ? 2 : c <= 48 ? 3 : c <= 57 ? 4 : c <= 67 ? 5 : c <= 77 ? 6 : c <= 86 ? 7 : 8;
+  return (WMO[CONFIG.lang] || WMO.en)[i];
+}
+function loadWeather() {
+  getJSON('https://api.open-meteo.com/v1/forecast?latitude=' + CONFIG.city.lat + '&longitude=' + CONFIG.city.lon +
+          '&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&timezone=auto', function (r) {
+    if (!r || !r.current) return;
+    weather = { t: Math.round(r.current.temperature_2m), c: wmoText(r.current.weather_code),
+                hi: Math.round(r.daily.temperature_2m_max[0]), lo: Math.round(r.daily.temperature_2m_min[0]) };
+    render();
+  });
+}
+
+/* ---------- rendering ---------- */
+function cardsHTML() {
+  var html = '', np = nextPrayer(), now = new Date();
+  if (np) {
+    var mins = Math.max(0, Math.round((np.at - now) / 60000));
+    var left = (mins >= 60 ? num(Math.floor(mins / 60)) + L.h + ' ' : '') + num(mins % 60) + L.m;
+    var ft = fmtTime(np.at);
+    html += '<div class="card"><div class="k">' + L.next + '</div><div class="v">' + L.P[np.name] + ' ' + ft.t +
+            ' <span style="font-size:1vw">' + ft.s + '</span></div><div class="n">' + L.inT + ' ' + left + '</div></div>';
+  }
+  if (ramadanStart === 'now') {
+    html += '<div class="card"><div class="k">' + L.ram + '</div><div class="v">' + L.now + '</div></div>';
+  } else if (ramadanStart) {
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var days = Math.round((ramadanStart - today) / 86400000);
+    var ds = ramadanStart.toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long' });
+    html += '<div class="card"><div class="k">' + L.ram + '</div><div class="v">' + num(days) + ' ' + L.days +
+            '</div><div class="n">' + L.starts + ' ' + ds + '</div></div>';
+  }
+  return html;
+}
+function render() {
+  var now = new Date(), ft = fmtTime(now);
+  $('clock').textContent = ft.t; $('ampm').textContent = ft.s; $('sClock').textContent = ft.t;
+  var g = now.toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  $('date').textContent = g + (hijriText ? '  •  ' + hijriText : '');
+  if (weather) {
+    $('wT').textContent = num(weather.t) + '°';
+    $('wS').textContent = (CONFIG.lang === 'ar' ? CONFIG.city.ar : CONFIG.city.en) + ' • ' + weather.c +
+                          ' • ' + num(weather.hi) + '° / ' + num(weather.lo) + '°';
+  }
+  var c = cardsHTML();
+  $('cards').innerHTML = c;
+  $('sRow').innerHTML = c + (weather ? '<div class="card"><div class="k">' +
+    (CONFIG.lang === 'ar' ? CONFIG.city.ar : CONFIG.city.en) + '</div><div class="v">' + num(weather.t) +
+    '°</div><div class="n">' + weather.c + '</div></div>' : '');
+}
+
+/* ---------- app shelf + remote ---------- */
+var focusIdx = 0, tiles = [];
+function buildShelf() {
+  $('shelfTitle').textContent = L.apps;
+  $('hint').textContent = L.hint;
+  var s = $('shelf');
+  CONFIG.apps.forEach(function (a, i) {
+    var d = document.createElement('div');
+    d.className = 'tile';
+    d.style.background = 'linear-gradient(160deg, ' + a.color + ' 0%, rgba(0,0,0,.55) 140%)';
+    d.innerHTML = '<div class="name">' + a.name + '</div>';
+    s.appendChild(d); tiles.push(d);
+  });
+  setFocus(0);
+}
+function setFocus(i) {
+  if (!tiles.length) return;
+  focusIdx = (i + tiles.length) % tiles.length;
+  tiles.forEach(function (t, k) { t.className = 'tile' + (k === focusIdx ? ' focus' : ''); });
+  var sh = $('shelf'), el = tiles[focusIdx];
+  if (el.scrollIntoView) el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+var toastTimer;
+function toast(msg) {
+  var t = $('toast'); t.textContent = msg; t.className = 'toast on';
+  clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.className = 'toast'; }, 3000);
+}
+function openApp(a) {
+  if (a.url) { window.location.href = a.url; } else { toast(L.noUrl); }
+}
+function exitApp() {
+  if (typeof window.Hisense_Exit === 'function') { try { window.Hisense_Exit(); return; } catch (e) {} }
+  try { window.close(); } catch (e) {}
+}
+
+/* ---------- screensaver ---------- */
+var idleTimer, saverOn = false;
+function resetIdle() {
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(function () { saverOn = true; $('saver').className = 'on'; }, CONFIG.screensaverMinutes * 60000);
+}
+
+document.addEventListener('keydown', function (e) {
+  var k = e.keyCode;
+  if (saverOn) { saverOn = false; $('saver').className = ''; resetIdle(); e.preventDefault(); return; }
+  resetIdle();
+  var next = RTL ? 37 : 39, prev = RTL ? 39 : 37;   // in RTL, Left = next tile
+  if (k === next) { setFocus(focusIdx + 1); e.preventDefault(); }
+  else if (k === prev) { setFocus(focusIdx - 1); e.preventDefault(); }
+  else if (k === 13) { openApp(CONFIG.apps[focusIdx]); e.preventDefault(); }
+  else if (k === 8 || k === 461 || k === 10009) { exitApp(); e.preventDefault(); }   // Back
+});
+
+buildShelf();
+updateBg();
+render();
+loadPrayers();
+loadWeather();
+resetIdle();
+setInterval(render, 15000);
+setInterval(updateBg, 60000);
+setInterval(loadWeather, 30 * 60000);
+setInterval(function () { if (new Date().getHours() === 0) loadPrayers(); }, 60 * 60000);
+</script>
+</body>
+</html>
